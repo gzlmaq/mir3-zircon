@@ -194,6 +194,7 @@ namespace Client.Scenes
         public EditCharacterDialog EditCharacterBox;
         public FortuneCheckerDialog FortuneCheckerBox;
         public NPCWeaponCraftWindow NPCWeaponCraftBox;
+        public NPCAccessoryRefineDialog NPCAccessoryRefineBox;
 
         public ClientUserItem[] Inventory = new ClientUserItem[Globals.InventorySize];
         public ClientUserItem[] Equipment = new ClientUserItem[Globals.EquipmentSize];
@@ -623,6 +624,12 @@ namespace Client.Scenes
             {
                 Visible = false,
                 Parent = this,
+            };
+
+            NPCAccessoryRefineBox = new NPCAccessoryRefineDialog
+            {
+                Parent = this,
+                Visible = false,
             };
 
             SetDefaultLocations();
@@ -3511,7 +3518,7 @@ namespace Client.Scenes
         {
             if (User == null) return;
 
-            User.MaxExperience = User.Level < Globals.ExperienceList.Count ? Globals.ExperienceList[User.Level] : 0;
+            //User.MaxExperience = User.Level < Globals.ExperienceList.Count ? Globals.ExperienceList[User.Level] : 0;
             MainPanel.LevelLabel.Text = User.Level.ToString();
 
             foreach (NPCGoodsCell cell in NPCGoodsBox.Cells)
@@ -4361,6 +4368,14 @@ namespace Client.Scenes
                         MagicBarBox.Dispose();
 
                     MagicBarBox = null;
+                }
+
+                if (NPCAccessoryRefineBox != null)
+                {
+                    if (!NPCAccessoryRefineBox.IsDisposed)
+                        NPCAccessoryRefineBox.Dispose();
+
+                    NPCAccessoryRefineBox = null;
                 }
 
                 Inventory = null;

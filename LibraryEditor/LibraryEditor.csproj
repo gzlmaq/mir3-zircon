@@ -1,13 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
     <ProjectGuid>{A779B96A-AE74-47E7-B0CA-A02B26C1F61E}</ProjectGuid>
     <OutputType>WinExe</OutputType>
     <NoStandardLibraries>false</NoStandardLibraries>
-    <AssemblyName>LibraryEditor</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <AssemblyName>Mir3LibraryEditor</AssemblyName>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <TargetFrameworkProfile>
     </TargetFrameworkProfile>
     <FileAlignment>512</FileAlignment>
@@ -90,6 +90,7 @@
     <None Include="Properties\Settings.settings" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Astc.cs" />
     <Compile Include="FixedListView.cs">
       <SubType>Component</SubType>
     </Compile>
