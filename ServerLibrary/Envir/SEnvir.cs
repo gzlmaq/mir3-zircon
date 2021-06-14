@@ -235,6 +235,8 @@ namespace Server.Envir
         public static Session Session;
 
         public static DBCollection<MapInfo> MapInfoList;
+        public static DBCollection<InstanceInfo> InstanceInfoList;
+        public static DBCollection<InstanceMapInfo> InstanceMapInfoList;
         public static DBCollection<SafeZoneInfo> SafeZoneInfoList;
         public static DBCollection<ItemInfo> ItemInfoList;
         public static DBCollection<RespawnInfo> RespawnInfoList;
@@ -267,6 +269,7 @@ namespace Server.Envir
         public static DBCollection<CompanionInfo> CompanionInfoList;
         public static DBCollection<CompanionLevelInfo> CompanionLevelInfoList;
         public static DBCollection<UserCompanion> UserCompanionList;
+        public static DBCollection<CompanionFilters> CompanionFiltersList;
         public static DBCollection<UserCompanionUnlock> UserCompanionUnlockList;
         public static DBCollection<CompanionSkillInfo> CompanionSkillInfoList;
         public static DBCollection<BlockInfo> BlockInfoList;
@@ -294,6 +297,7 @@ namespace Server.Envir
         public static Random Random;
 
         public static Dictionary<MapInfo, Map> Maps = new Dictionary<MapInfo, Map>();
+        public static Dictionary<InstanceInfo, Dictionary<MapInfo, Map>[]> Instances = new Dictionary<InstanceInfo, Dictionary<MapInfo, Map>[]>();
 
         private static long _ObjectID;
         public static uint ObjectID => (uint)Interlocked.Increment(ref _ObjectID);
@@ -387,6 +391,7 @@ namespace Server.Envir
             );
 
             MapInfoList = Session.GetCollection<MapInfo>();
+            InstanceInfoList = Session.GetCollection<InstanceInfo>();
             SafeZoneInfoList = Session.GetCollection<SafeZoneInfo>();
             ItemInfoList = Session.GetCollection<ItemInfo>();
             MonsterInfoList = Session.GetCollection<MonsterInfo>();
@@ -421,6 +426,7 @@ namespace Server.Envir
             CompanionInfoList = Session.GetCollection<CompanionInfo>();
             CompanionLevelInfoList = Session.GetCollection<CompanionLevelInfo>();
             UserCompanionList = Session.GetCollection<UserCompanion>();
+            CompanionFiltersList = Session.GetCollection<CompanionFilters>();
             UserCompanionUnlockList = Session.GetCollection<UserCompanionUnlock>();
             BlockInfoList = Session.GetCollection<BlockInfo>();
             CastleInfoList = Session.GetCollection<CastleInfo>();
@@ -566,7 +572,16 @@ namespace Server.Envir
 
             #region Load Files
             for (int i = 0; i < MapInfoList.Count; i++)
+            {
                 Maps[MapInfoList[i]] = new Map(MapInfoList[i]);
+            }
+
+            for (int i = 0; i < InstanceInfoList.Count; i++)
+            {
+                int count = InstanceInfoList[i].MaxInstances > 0 ? InstanceInfoList[i].MaxInstances : byte.MaxValue;
+
+                Instances[InstanceInfoList[i]] = new Dictionary<MapInfo, Map>[count];
+            }
 
 
             Parallel.ForEach(Maps, x => x.Value.Load());
@@ -594,16 +609,21 @@ namespace Server.Envir
             CreateSpawns();
         }
 
-        private static void CreateMovements()
+        private static void CreateMovements(InstanceInfo instance = null, byte index = 0)
         {
             foreach (MovementInfo movement in MovementInfoList.Binding)
             {
                 if (movement.SourceRegion == null) continue;
 
-                Map sourceMap = GetMap(movement.SourceRegion.Map);
+                Map sourceMap = GetMap(movement.SourceRegion.Map, instance, index);
+
                 if (sourceMap == null)
                 {
-                    Log($"[Movement] Bad Source Map, Source: {movement.SourceRegion.ServerDescription}");
+                    if (instance == null)
+                    {
+                        Log($"[Movement] Bad Source Map, Source: {movement.SourceRegion.ServerDescription}");
+                    }
+
                     continue;
                 }
 
@@ -613,10 +633,14 @@ namespace Server.Envir
                     continue;
                 }
 
-                Map destMap = GetMap(movement.DestinationRegion.Map);
+                Map destMap = GetMap(movement.DestinationRegion.Map, instance, index);
                 if (destMap == null)
                 {
-                    Log($"[Movement] Bad Destinatoin Map, Destination: {movement.DestinationRegion.ServerDescription}");
+                    if (instance == null)
+                    {
+                        Log($"[Movement] Bad Destination Map, Destination: {movement.DestinationRegion.ServerDescription}");
+                    }
+
                     continue;
                 }
 
@@ -639,17 +663,21 @@ namespace Server.Envir
             }
         }
 
-        private static void CreateNPCs()
+        private static void CreateNPCs(InstanceInfo instance = null, byte index = 0)
         {
             foreach (NPCInfo info in NPCInfoList.Binding)
             {
                 if (info.Region == null) continue;
 
-                Map map = GetMap(info.Region.Map);
+                Map map = GetMap(info.Region.Map, instance, index);
 
                 if (map == null)
                 {
-                    Log(string.Format("[NPC] Bad Map, NPC: {0}, Map: {1}", info.NPCName, info.Region.ServerDescription));
+                    if (instance == null)
+                    {
+                        Log(string.Format("[NPC] Bad Map, NPC: {0}, Map: {1}", info.NPCName, info.Region.ServerDescription));
+                    }
+
                     continue;
                 }
 
@@ -658,22 +686,26 @@ namespace Server.Envir
                     NPCInfo = info,
                 };
 
-                if (!ob.Spawn(info.Region))
+                if (!ob.Spawn(info.Region, instance, index))
                     Log($"[NPC] Failed to spawn NPC, Region: {info.Region.ServerDescription}, NPC: {info.NPCName}");
             }
         }
 
-        private static void CreateSafeZones()
+        private static void CreateSafeZones(InstanceInfo instance = null, byte index = 0)
         {
             foreach (SafeZoneInfo info in SafeZoneInfoList.Binding)
             {
                 if (info.Region == null) continue;
 
-                Map map = GetMap(info.Region.Map);
+                Map map = GetMap(info.Region.Map, instance, index);
 
                 if (map == null)
                 {
-                    Log($"[Safe Zone] Bad Map, Map: {info.Region.ServerDescription}");
+                    if (instance == null)
+                    {
+                        Log($"[Safe Zone] Bad Map, Map: {info.Region.ServerDescription}");
+                    }
+
                     continue;
                 }
 
@@ -717,16 +749,17 @@ namespace Server.Envir
                         Effect = SpellEffect.SafeZone
                     };
 
-                    ob.Spawn(map.Info, point);
+                    ob.Spawn(map, point);
                 }
 
-                if (info.BindRegion == null) continue;
+                if (info.BindRegion == null || instance != null) continue;
 
                 map = GetMap(info.BindRegion.Map);
 
                 if (map == null)
                 {
                     Log($"[Safe Zone] Bad Bind Map, Map: {info.Region.ServerDescription}");
+
                     continue;
                 }
 
@@ -746,23 +779,26 @@ namespace Server.Envir
             }
         }
 
-        private static void CreateSpawns()
+        private static void CreateSpawns(InstanceInfo instance = null, byte index = 0)
         {
             foreach (RespawnInfo info in RespawnInfoList.Binding)
             {
                 if (info.Monster == null) continue;
                 if (info.Region == null) continue;
 
-                Map map = GetMap(info.Region.Map);
+                Map map = GetMap(info.Region.Map, instance, index);
 
                 if (map == null)
                 {
-                    Log(string.Format("[Respawn] Bad Map, Map: {0}", info.Region.ServerDescription));
+                    if (instance == null)
+                    {
+                        Log(string.Format("[Respawn] Bad Map, Map: {0}", info.Region.ServerDescription));
+                    }
+
                     continue;
                 }
 
-                Spawns.Add(new SpawnInfo(info));
-
+                Spawns.Add(new SpawnInfo(info, instance, index));
             }
         }
 
@@ -774,6 +810,7 @@ namespace Server.Envir
 
 
             MapInfoList = null;
+            InstanceInfoList = null;
             SafeZoneInfoList = null;
             AccountInfoList = null;
             CharacterInfoList = null;
@@ -800,6 +837,7 @@ namespace Server.Envir
 
 
             Maps.Clear();
+            Instances.Clear();
             Objects.Clear();
             ActiveObjects.Clear();
             Players.Clear();
@@ -973,13 +1011,32 @@ namespace Server.Envir
                         foreach (KeyValuePair<MapInfo, Map> pair in Maps)
                             pair.Value.Process();
 
+                        foreach (var instance in Instances)
+                        {
+                            for (byte i = 0; i < instance.Value.Length; i++)
+                            {
+                                if (instance.Value[i] == null) continue;
+
+                                foreach (KeyValuePair<MapInfo, Map> pair in instance.Value[i])
+                                    pair.Value.Process();
+
+                                if (instance.Value[i].Values.All(x => x.LastPlayer.AddMinutes(10) < DateTime.Now))
+                                {
+                                    UnloadInstance(instance.Key, i);
+                                }
+                            }
+                        }
+
                         foreach (SpawnInfo spawn in Spawns)
                             spawn.DoSpawn(false);
 
                         for (int i = ConquestWars.Count - 1; i >= 0; i--)
                             ConquestWars[i].Process();
 
-                        WebServer.Process();
+                        if (Config.EnableWebServer)
+                        {
+                            WebServer.Process();
+                        }
 
                         if (Config.ProcessGameGold)
                             ProcessGameGold();
@@ -3362,9 +3419,77 @@ namespace Server.Envir
 
             return result;
         }
-        public static Map GetMap(MapInfo info)
+        public static Map GetMap(MapInfo info, InstanceInfo instance = null, byte instanceIndex = 0)
         {
-            return info != null && Maps.ContainsKey(info) ? Maps[info] : null;
+            if (instance == null)
+            {
+                return info != null && Maps.ContainsKey(info) ? Maps[info] : null;
+            }
+
+            var instanceMaps = Instances[instance];
+
+            if (instanceIndex >= instanceMaps.Length || instanceMaps[instanceIndex] == null)
+            {
+                return null;
+            }
+
+            return instanceMaps != null && instanceMaps[instanceIndex].ContainsKey(info) ? instanceMaps[instanceIndex][info] : null;
+        }
+
+        public static byte? LoadInstance(InstanceInfo instance)
+        {
+            var mapInstance = Instances[instance];
+
+            var index = -1;
+
+            for (int i = 0; i < mapInstance.Length; i++)
+            {
+                if (mapInstance[i] == null)
+                {
+                    index = i;
+                    break;
+                }
+            }
+
+            if (index < 0)
+            {
+                return null;
+            }
+
+            mapInstance[index] = new Dictionary<MapInfo, Map>();
+
+            for (int i = 0; i < instance.Maps.Count; i++)
+            {
+                mapInstance[index][instance.Maps[i].Map] = new Map(instance.Maps[i].Map, instance, (byte)index);
+            }
+
+            Parallel.ForEach(mapInstance[index], x => x.Value.Load());
+
+            foreach (Map map in mapInstance[index].Values)
+            {
+                map.Setup();
+            }
+
+            CreateSafeZones();
+
+            CreateMovements(instance, (byte)index);
+
+            CreateNPCs(instance, (byte)index);
+
+            CreateSpawns(instance, (byte)index);
+
+            Log($"Loaded Instance {instance.Name} at index {index}");
+
+            return (byte)index;
+        }
+
+        public static void UnloadInstance(InstanceInfo instance, byte index)
+        {
+            //TODO - Dispose of all spawns/npcs/spell objects on map (remove from spawn list??)
+
+            Instances[instance][index] = null;
+
+            Log($"Unloaded Instance {instance.Name} at index {index}");
         }
 
         public static UserConquestStats GetConquestStats(PlayerObject player)

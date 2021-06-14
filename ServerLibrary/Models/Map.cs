@@ -16,7 +16,8 @@ namespace Server.Models
     public sealed class Map
     {
         public MapInfo Info { get; }
-
+        public InstanceInfo Instance { get; }
+        public byte InstanceIndex { get; }
         public int Width { get; private set; }
         public int Height { get; private set; }
 
@@ -31,13 +32,19 @@ namespace Server.Models
         public List<NPCObject> NPCs { get; } = new List<NPCObject>();
         public HashSet<MapObject>[] OrderedObjects;
 
-        public DateTime LastProcess;
+        public DateTime LastProcess, LastPlayer;
 
         public DateTime HalloweenEventTime, ChristmasEventTime;
 
-        public Map(MapInfo info)
+        public Map(MapInfo info, InstanceInfo instance = null, byte instanceIndex = 0)
         {
             Info = info;
+
+            if (instance != null)
+            {
+                Instance = instance;
+                InstanceIndex = instanceIndex;
+            }
         }
 
         public void Load()
@@ -77,6 +84,8 @@ namespace Server.Models
         public void Setup()
         {
             CreateGuards();
+
+            LastPlayer = DateTime.Now;
         }
 
         private void CreateGuards()
@@ -86,7 +95,7 @@ namespace Server.Models
                 MonsterObject mob = MonsterObject.GetMonster(info.Monster);
                 mob.Direction = info.Direction;
 
-                if (!mob.Spawn(Info, new Point(info.X, info.Y)))
+                if (!mob.Spawn(this, new Point(info.X, info.Y)))
                 {
                     SEnvir.Log($"Failed to spawn Guard Map:{Info.Description}, Location: {info.X}, {info.Y}");
                     continue;
@@ -97,6 +106,10 @@ namespace Server.Models
 
         public void Process()
         {
+            if (LastPlayer.AddMinutes(1) < DateTime.Now && Players.Any())
+            {
+                LastPlayer = DateTime.Now;
+            }
         }
 
         public void AddObject(MapObject ob)
@@ -246,10 +259,10 @@ namespace Server.Models
 
         public DateTime LastCheck;
 
-        public SpawnInfo(RespawnInfo info)
+        public SpawnInfo(RespawnInfo info, InstanceInfo instance, byte index)
         {
             Info = info;
-            CurrentMap = SEnvir.GetMap(info.Region.Map);
+            CurrentMap = SEnvir.GetMap(info.Region.Map, instance, index);
             LastCheck = SEnvir.Now;
         }
 
@@ -302,7 +315,7 @@ namespace Server.Models
 
                 mob.SpawnInfo = this;
 
-                if (!mob.Spawn(Info.Region))
+                if (!mob.Spawn(Info.Region, CurrentMap.Instance, CurrentMap.InstanceIndex))
                 {
                     mob.SpawnInfo = null;
                     continue;
@@ -397,7 +410,7 @@ namespace Server.Models
             {
                 MovementInfo movement = Movements[SEnvir.Random.Next(Movements.Count)];
 
-                Map map = SEnvir.GetMap(movement.DestinationRegion.Map);
+                Map map = SEnvir.GetMap(movement.DestinationRegion.Map, Map.Instance, Map.InstanceIndex);
 
 
                 Cell cell = map.GetCell(movement.DestinationRegion.PointList[SEnvir.Random.Next(movement.DestinationRegion.PointList.Count)]);

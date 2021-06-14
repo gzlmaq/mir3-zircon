@@ -179,6 +179,7 @@ namespace Client.Scenes
         public InspectDialog InspectBox;
         public RankingDialog RankingBox;
         public MarketPlaceDialog MarketPlaceBox;
+        public DungeonFinderDialog DungeonFinderBox;
         public MailDialog MailBox;
         public ReadMailDialog ReadMailBox;
         public SendMailDialog SendMailBox;
@@ -188,6 +189,7 @@ namespace Client.Scenes
         public QuestDialog QuestBox;
         public QuestTrackerDialog QuestTrackerBox;
         public CompanionDialog CompanionBox;
+        public CompanionFilterDialog CompanionFilterBox;
         public BlockDialog BlockBox;
         public MonsterDialog MonsterBox;
         public MagicBarDialog MagicBarBox;
@@ -544,6 +546,11 @@ namespace Client.Scenes
                 Parent = this,
                 Visible = false,
             };
+            DungeonFinderBox = new DungeonFinderDialog
+            {
+                Parent = this,
+                Visible = false,
+            };
             EditCharacterBox = new EditCharacterDialog
             {
                 Parent = this,
@@ -596,7 +603,11 @@ namespace Client.Scenes
                 Parent = this,
                 Visible = false,
             };
-
+            CompanionFilterBox = new CompanionFilterDialog
+            {
+                Parent = this,
+                Visible = false,
+            };
             BlockBox = new BlockDialog
             {
                 Parent = this,
@@ -998,6 +1009,9 @@ namespace Client.Scenes
                             MarketPlaceBox.Visible = true;
                             MarketPlaceBox.StoreTab.TabButton.InvokeMouseClick();
                         }
+                        break;
+                    case KeyBindAction.DungeonFinderWindow:
+                        DungeonFinderBox.Visible = !DungeonFinderBox.Visible;
                         break;
                     case KeyBindAction.CompanionWindow:
                         CompanionBox.Visible = !CompanionBox.Visible;

@@ -1197,7 +1197,7 @@ namespace Server.Models
         }
         public virtual bool SpawnMinion(MonsterObject mob)
         {
-            return mob.Spawn(CurrentMap.Info, CurrentMap.GetRandomLocation(CurrentLocation, 6));
+            return mob.Spawn(CurrentMap, CurrentMap.GetRandomLocation(CurrentLocation, 6));
         }
         public override int Pushed(MirDirection direction, int distance)
         {
@@ -1936,7 +1936,7 @@ namespace Server.Models
                 Effect = SpellEffect.MonsterFireWall
             };
 
-            ob.Spawn(cell.Map.Info, cell.Location);
+            ob.Spawn(cell.Map, cell.Location);
 
         }
 
@@ -1970,7 +1970,7 @@ namespace Server.Models
                 Visible = visible,
             };
 
-            ob.Spawn(cell.Map.Info, cell.Location);
+            ob.Spawn(cell.Map, cell.Location);
 
         }
         public void MassLightningBall()
@@ -2217,7 +2217,7 @@ namespace Server.Models
                     Power = 20
                 };
 
-                ob.Spawn(CurrentMap.Info, cell.Location);
+                ob.Spawn(CurrentMap, cell.Location);
             }
 
         }
@@ -2443,28 +2443,28 @@ namespace Server.Models
                         case EventActionType.MonsterPlayerSpawn:
 
                             MonsterObject mob = GetMonster(action.MonsterParameter1);
-                            mob.Spawn(CurrentMap.Info, CurrentMap.GetRandomLocation(CurrentLocation, 10));
+                            mob.Spawn(CurrentMap, CurrentMap.GetRandomLocation(CurrentLocation, 10));
                             break;
                         case EventActionType.MovementSettings:
                             break;
                         case EventActionType.PlayerRecall:
-                            map = SEnvir.GetMap(action.MapParameter1);
+                            map = SEnvir.GetMap(action.MapParameter1, CurrentMap.Instance, CurrentMap.InstanceIndex);
                             if (map == null) continue;
 
                             for (int i = map.Players.Count - 1; i >= 0; i--)
                             {
                                 PlayerObject player = map.Players[i];
-                                player.Teleport(action.RegionParameter1);
+                                player.Teleport(action.RegionParameter1, CurrentMap.Instance, CurrentMap.InstanceIndex);
                             }
                             break;
                         case EventActionType.PlayerEscape:
-                            map = SEnvir.GetMap(action.MapParameter1);
+                            map = SEnvir.GetMap(action.MapParameter1, CurrentMap.Instance, CurrentMap.InstanceIndex);
                             if (map == null) continue;
 
                             for (int i = map.Players.Count - 1; i >= 0; i--)
                             {
                                 PlayerObject player = map.Players[i];
-                                player.Teleport(player.Character.BindPoint.BindRegion);
+                                player.Teleport(player.Character.BindPoint.BindRegion, CurrentMap.Instance, CurrentMap.InstanceIndex);
                             }
                             break;
                     }
@@ -2719,7 +2719,7 @@ namespace Server.Models
                         MonsterDrop = true,
                     };
 
-                    ob.Spawn(CurrentMap.Info, cell.Location);
+                    ob.Spawn(CurrentMap, cell.Location);
 
                     if (owner.Stats[Stat.CompanionCollection] > 0 && owner.Companion != null)
                     {
@@ -2780,7 +2780,7 @@ namespace Server.Models
                     };
 
 
-                    ob.Spawn(CurrentMap.Info, cell.Location);
+                    ob.Spawn(CurrentMap, cell.Location);
 
                     if (owner.Stats[Stat.CompanionCollection] > 0 && owner.Companion != null)
                     {
@@ -2872,7 +2872,7 @@ namespace Server.Models
 
 
 
-                            ob.Spawn(CurrentMap.Info, cell.Location);
+                            ob.Spawn(CurrentMap, cell.Location);
 
                             userTask.Objects.Add(ob);
 
